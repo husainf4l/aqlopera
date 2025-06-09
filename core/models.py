@@ -1,7 +1,7 @@
 """
 Data models and schemas for the Web Operator Agent
 """
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -89,8 +89,10 @@ class WebElement(BaseModel):
     attributes: Dict[str, str] = {}
     coordinates: tuple[int, int]
     size: tuple[int, int]
+    selector: Optional[str] = None  # CSS selector for the element
     is_visible: bool = True
     is_clickable: bool = False
+    element_type: Optional[str] = None  # Type category (links, buttons, inputs, etc.)
 
 
 class PageAnalysis(BaseModel):

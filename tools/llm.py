@@ -38,12 +38,12 @@ You can perform these actions (use lowercase):
 - confirm: Ask for user confirmation
 - fill_form: Fill out a form
 
-Given the current page analysis and task description, return a JSON list of actions to take.
-Each action should have: action_type (lowercase), target (CSS selector or description), value (if needed), and reason.
-
-Be specific and practical. If you need to click something, identify the exact element.
-If you need to type, specify what text to enter.
-Always include a clear reason for each action.
+IMPORTANT RULES:
+1. Check the current URL first - if you're already at the target URL, DON'T navigate again
+2. If the task is just navigation and you're already there, return an empty array []
+3. Be specific about CSS selectors or text to find elements
+4. Don't repeat actions that would have no effect
+5. For simple tasks like "go to X and take screenshot", if you're already at X, the task may be complete
 
 Current page analysis:
 - URL: {url}
@@ -52,7 +52,10 @@ Current page analysis:
 
 Task: {task}
 
-Return only a JSON array of actions."""
+Given the current state, return a JSON list of actions needed to complete the task.
+Each action should have: action_type (lowercase), target (CSS selector or description), value (if needed), and reason.
+
+Return only a JSON array of actions, or [] if no actions are needed."""
 
             elements_summary = []
             for i, element in enumerate(page_analysis.elements[:10]):  # Limit to first 10
@@ -124,12 +127,18 @@ Return only a JSON array of actions."""
         try:
             system_prompt = """You are an expert web automation analyst. Analyze whether a given task has been completed successfully based on the current page state and execution log.
 
+IMPORTANT: Be specific about what constitutes task completion:
+- For navigation tasks (e.g., "go to X", "navigate to Y"), the task is complete when the URL shows we've successfully reached the target
+- For simple screenshot tasks, they're complete once we've navigated and taken the screenshot  
+- For search tasks, they're complete when search results are visible
+- Look at the execution log to see what has already been accomplished
+
 Task: {task}
 Current page URL: {url}
 Current page title: {title}
-Execution log: {log}
+Recent execution log: {log}
 
-Analyze the situation and return a JSON response with:
+Analyze the situation carefully and return a JSON response with:
 {{
     "completed": true/false,
     "confidence": 0.0-1.0,
@@ -137,13 +146,18 @@ Analyze the situation and return a JSON response with:
     "next_action_needed": "what should be done next (if not complete)",
     "success_indicators": ["list of indicators that show success"],
     "failure_indicators": ["list of indicators that show failure"]
-}}"""
+}}
+
+Examples:
+- Task "Go to Google" + Current URL "https://www.google.com" = completed: true
+- Task "Navigate to example.com" + Current URL "https://example.com" = completed: true
+- Task "Search for X" + Search results visible = completed: true"""
 
             prompt = system_prompt.format(
                 task=task_description,
                 url=page_analysis.url,
                 title=page_analysis.title,
-                log=json.dumps(execution_log[-10:])  # Last 10 log entries
+                log=json.dumps(execution_log[-15:])  # Last 15 log entries for more context
             )
             
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])

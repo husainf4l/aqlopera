@@ -1,10 +1,9 @@
 """
 Task planning and initialization node
 """
-from typing import Dict, Any
 from core.models import AgentState, TaskStatus
 from tools.llm import llm_tool
-from tools.browser import browser_tool
+from tools.enhanced_browser import enhanced_browser_tool
 from core.logging import app_logger
 
 
@@ -16,12 +15,12 @@ async def plan_task_node(state: AgentState) -> AgentState:
     
     try:
         # Initialize browser if needed
-        if not browser_tool.browser:
-            await browser_tool.initialize()
+        if not enhanced_browser_tool.browser:
+            await enhanced_browser_tool.initialize()
         
         # If a starting URL is provided, navigate to it
         if state.current_url:
-            success = await browser_tool.navigate_to(state.current_url)
+            success = await enhanced_browser_tool.navigate_to(state.current_url)
             if not success:
                 updated_state = state.copy()
                 updated_state.status = TaskStatus.FAILED
@@ -30,13 +29,13 @@ async def plan_task_node(state: AgentState) -> AgentState:
                 return updated_state
         
         # Take initial screenshot
-        screenshot_path = await browser_tool.take_screenshot(state.task_id)
+        screenshot_path = await enhanced_browser_tool.take_screenshot(state.task_id)
         
         # Analyze the current page
-        page_analysis = await browser_tool.analyze_page()
+        page_analysis = await enhanced_browser_tool.analyze_page()
         
         if page_analysis:
-            # Plan initial actions
+            # Plan initial actions using enhanced page analysis
             actions = await llm_tool.plan_actions(state.description, page_analysis)
             
             # Return updated state
@@ -75,10 +74,10 @@ async def analyze_page_node(state: AgentState) -> AgentState:
     
     try:
         # Take screenshot
-        screenshot_path = await browser_tool.take_screenshot(state.task_id)
+        screenshot_path = await enhanced_browser_tool.take_screenshot(state.task_id)
         
         # Analyze page
-        page_analysis = await browser_tool.analyze_page()
+        page_analysis = await enhanced_browser_tool.analyze_page()
         
         if page_analysis:
             # Check if task is complete

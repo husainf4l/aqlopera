@@ -3,7 +3,7 @@ Action execution nodes for different types of web interactions
 """
 import asyncio
 from core.models import AgentState, TaskStatus, ActionType
-from tools.browser import browser_tool
+from tools.enhanced_browser import enhanced_browser_tool
 from tools.llm import llm_tool
 from core.logging import app_logger
 
@@ -71,9 +71,10 @@ async def execute_action_node(state: AgentState) -> AgentState:
     Execute the next pending action
     """
     if not state.pending_actions:
-        app_logger.warning("No pending actions to execute")
+        app_logger.warning("No pending actions to execute - task may be complete")
         updated_state = state.copy()
         updated_state.status = TaskStatus.COMPLETED
+        updated_state.execution_log = state.execution_log + ["No more actions needed - task complete"]
         return updated_state
     
     next_action = state.pending_actions[0]
@@ -82,26 +83,35 @@ async def execute_action_node(state: AgentState) -> AgentState:
     try:
         # Execute the action using browser tool
         if next_action.action_type == ActionType.NAVIGATE:
-            success = await browser_tool.navigate_to(next_action.target)
-            result = {"success": success, "current_url": next_action.target if success else None}
+            # Check if we're already at the target URL to avoid redundant navigation
+            if enhanced_browser_tool.current_url and next_action.target:
+                if next_action.target.lower() in enhanced_browser_tool.current_url.lower():
+                    app_logger.info(f"Already at target URL {next_action.target}, skipping navigation")
+                    result = {"success": True, "current_url": enhanced_browser_tool.current_url, "skipped": True}
+                else:
+                    success = await enhanced_browser_tool.navigate_to(next_action.target)
+                    result = {"success": success, "current_url": next_action.target if success else None}
+            else:
+                success = await enhanced_browser_tool.navigate_to(next_action.target)
+                result = {"success": success, "current_url": next_action.target if success else None}
         elif next_action.action_type == ActionType.CLICK:
-            success = await browser_tool.click_element(selector=next_action.target)
+            success = await enhanced_browser_tool.smart_click(next_action.target)
             result = {"success": success, "message": f"Clicked {next_action.target}" if success else "Click failed"}
         elif next_action.action_type == ActionType.TYPE:
-            success = await browser_tool.type_text(next_action.target, next_action.value)
+            success = await enhanced_browser_tool.smart_fill(next_action.target, next_action.value)
             result = {"success": success, "message": f"Typed text into {next_action.target}" if success else "Type failed"}
         elif next_action.action_type == ActionType.FILL_FORM:
-            # For now, treat as TYPE action since fill_form might not be implemented
-            success = await browser_tool.type_text(next_action.target, next_action.value)
+            # Use enhanced smart fill for form filling
+            success = await enhanced_browser_tool.smart_fill(next_action.target, next_action.value)
             result = {"success": success, "message": f"Filled form field {next_action.target}" if success else "Form fill failed"}
         elif next_action.action_type == ActionType.SCROLL:
-            success = await browser_tool.scroll_page(next_action.target or "down")
+            success = await enhanced_browser_tool.scroll_page(next_action.target or "down")
             result = {"success": success, "message": f"Scrolled {next_action.target or 'down'}" if success else "Scroll failed"}
         elif next_action.action_type == ActionType.WAIT:
             await asyncio.sleep(float(next_action.value or "1"))
             result = {"success": True, "message": f"Waited {next_action.value} seconds"}
         elif next_action.action_type == ActionType.SCREENSHOT:
-            screenshot_path = await browser_tool.take_screenshot(state.task_id)
+            screenshot_path = await enhanced_browser_tool.take_screenshot(state.task_id)
             result = {"success": bool(screenshot_path), "message": f"Screenshot saved: {screenshot_path}" if screenshot_path else "Screenshot failed"}
         else:
             app_logger.error(f"Unknown action type: {next_action.action_type}")

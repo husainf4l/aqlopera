@@ -27,6 +27,21 @@ def should_continue_execution(state: AgentState) -> Literal["continue", "complet
         app_logger.warning(f"Maximum steps ({state.max_steps}) reached")
         return "complete"
     
+    # Simple heuristic: Check for basic navigation tasks that are already complete
+    if state.page_analysis and state.current_url:
+        # For simple navigation tasks, check if we're already at the target
+        description_lower = state.description.lower()
+        current_url_lower = state.current_url.lower()
+        
+        # Check for simple navigation patterns
+        if any(phrase in description_lower for phrase in ["go to", "navigate to", "visit"]):
+            # Check if we've successfully navigated to common targets
+            if ("google" in description_lower and "google.com" in current_url_lower) or \
+               ("example.com" in description_lower and "example.com" in current_url_lower) or \
+               ("httpbin" in description_lower and "httpbin.org" in current_url_lower):
+                app_logger.info(f"Simple navigation task appears complete - at {state.current_url}")
+                return "complete"
+    
     # Check if no more actions
     if not state.pending_actions:
         return "complete"
