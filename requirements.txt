@@ -1,0 +1,48 @@
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.3
+
+# LangGraph and LangChain (Latest versions as of June 2025)
+langgraph==0.4.8
+langchain==0.3.25
+langchain-openai==0.3.21
+langchain-community==0.3.24
+langchain-core>=0.3.58
+
+# Web Automation & Browser Control
+selenium==4.28.0
+playwright==1.52.0
+beautifulsoup4==4.13.2
+requests==2.32.3
+
+# AI/ML & Computer Vision
+opencv-python==4.11.0.86
+Pillow==11.1.0
+numpy==2.2.1
+
+# Database & State Management
+aiosqlite==0.21.0
+redis==5.2.1
+
+# Environment & Configuration
+python-dotenv==1.0.1
+pydantic-settings==2.8.1
+
+# Logging & Monitoring
+loguru==0.7.3
+prometheus-client==0.22.0
+
+# Security & Authentication
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.4.0
+
+# Additional Utilities
+aiofiles==24.1.0
+python-multipart==0.0.18
+jinja2==3.1.6
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.28.1
